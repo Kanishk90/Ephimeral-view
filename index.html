@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ephemeral - Secure Image Sharing</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 20px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 0 0 60px rgba(102, 126, 234, 0.2);
+      padding: 50px;
+      max-width: 650px;
+      width: 100%;
+      backdrop-filter: blur(10px);
+      animation: slideUp 0.6s ease-out;
+      border: 2px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      font-size: 56px;
+      margin-bottom: 20px;
+      display: inline-block;
+      animation: float 3s ease-in-out infinite;
+      filter: drop-shadow(0 8px 16px rgba(102, 126, 234, 0.3));
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    h1 {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #555;
+      margin-bottom: 10px;
+      font-size: 15px;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+
+    .tagline {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-size: 13px;
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    /* Upload Area */
+    .upload-section {
+      margin-bottom: 35px;
+    }
+
+    .upload-area {
+      border: 3px dashed #667eea;
+      border-radius: 16px;
+      padding: 60px 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(135deg, #f8f9ff 0%, #f0f1ff 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-area::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .upload-area:hover::before {
+      left: 100%;
+    }
+
+    .upload-area:hover {
+      border-color: #764ba2;
+      background: linear-gradient(135deg, #f0f1ff 0%, #e8e9ff 100%);
+      transform: scale(1.02);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    }
+
+    .upload-area.dragover {
+      border-color: #764ba2;
+      background: linear-gradient(135deg, #e8e9ff 0%, #dfe1ff 100%);
+      transform: scale(1.05);
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+    }
+
+    .upload-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      display: block;
+      animation: bounce 2s ease-in-out infinite;
+      filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.25));
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .upload-text {
+      color: #2c3e50;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+    }
+
+    .upload-hint {
+      color: #888;
+      font-size: 13px;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    /* TTL Selector */
+    .ttl-section {
+      margin-bottom: 30px;
+      padding: 28px;
+      background: linear-gradient(135deg, rgba(248, 249, 255, 0.9) 0%, rgba(240, 241, 255, 0.9) 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(102, 126, 234, 0.25);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.08);
+    }
+
+    .ttl-label {
+      display: block;
+      color: #2c3e50;
+      font-weight: 700;
+      margin-bottom: 16px;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .ttl-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .ttl-btn {
+      padding: 11px 20px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #666;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ttl-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .ttl-btn:hover::before {
+      left: 100%;
+    }
+
+    .ttl-btn.single-view-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+      font-weight: 700;
+    }
+
+    .ttl-btn.single-view-btn::before {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .ttl-btn.single-view-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 28px rgba(102, 126, 234, 0.4);
+    }
+
+    .ttl-btn.single-view-btn.active {
+      box-shadow: 0 10px 28px rgba(102, 126, 234, 0.45);
+      transform: translateY(-3px);
+    }
+
+    .ttl-btn:hover {
+      border-color: #667eea;
+      color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.2);
+    }
+
+    .ttl-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .ttl-btn.active::before {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .ttl-description {
+      font-size: 12px;
+      color: #888;
+      margin-top: 10px;
+      line-height: 1.5;
+      font-style: italic;
+      font-weight: 500;
+      opacity: 0.85;
+    }
+
+    /* Buttons */
+    .button-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    button {
+      flex: 1;
+      padding: 18px 28px;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      letter-spacing: 0.5px;
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    button:active::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-upload {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-upload:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-upload:active {
+      transform: translateY(-2px);
+    }
+
+    .btn-upload:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .viewer-link a:hover {
+      text-decoration: underline;
+      color: #667eea;
+    }
+
+    /* Gallery */
+    .gallery-section {
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 2px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .gallery-title {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+      margin-bottom: 24px;
+      font-size: 18px;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 14px;
+    }
+
+    .gallery-item {
+      position: relative;
+      cursor: pointer;
+      border-radius: 12px;
+      overflow: visible;
+      background: #f0f0f0;
+      aspect-ratio: 1;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border: 2px solid transparent;
+    }
+
+    .gallery-item:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.3);
+      border-color: rgba(102, 126, 234, 0.5);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .gallery-item-ttl {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+      color: white;
+      font-size: 12px;
+      padding: 8px 6px;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .gallery-item-delete {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+      padding: 0;
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .gallery-item-delete:hover {
+      background: linear-gradient(135deg, #c82333 0%, #a81d28 100%);
+      transform: scale(1.15);
+      box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+    }
+
+    .gallery-item-view {
+      position: absolute;
+      top: 52px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #34b4eb 0%, #0ea5e9 100%);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+      padding: 0;
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    }
+
+    .gallery-item-view:hover {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      transform: scale(1.15);
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
+    }
+
+    .gallery-item-copy {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+      padding: 0;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .gallery-item-copy:hover {
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      transform: scale(1.15);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .gallery-item-copy:active {
+      transform: scale(0.9);
+    }
+
+    .gallery-item:hover .gallery-item-copy {
+      opacity: 1;
+    }
+
+    .gallery-item-copy.copied {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      animation: pulse 0.5s ease-out;
+      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+      100% { transform: scale(1.15); }
+    }
+
+    .gallery-item:hover .gallery-item-view {
+      opacity: 1;
+    }
+
+    .gallery-item-view:active {
+      transform: scale(0.95);
+    }
+
+    .gallery-item:hover .gallery-item-delete {
+      opacity: 1;
+    }
+
+    .gallery-item-delete:active {
+      transform: scale(0.9);
+    }
+
+    .no-images {
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+      padding: 40px 20px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 2px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .feature {
+      text-align: center;
+      padding: 16px;
+    }
+
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .feature-text {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🔒</div>
+      <h1>Akshit's Copyright</h1>
+      <p class="subtitle">Secure & Private Image Sharing</p>
+      <p class="tagline">Images that auto-delete • Zero server uploads • Complete privacy</p>
+    </div>
+
+    <div class="upload-section">
+      <div class="upload-area" id="uploadArea">
+        <span class="upload-icon">�</span>
+        <div class="upload-text">Drop your image here</div>
+        <div class="upload-hint">Or click to select • PNG, JPG, GIF, WebP</div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+    </div>
+
+    <div class="ttl-section">
+      <label class="ttl-label">⏰ Image Auto-Deletes In:</label>
+      <div class="ttl-options">
+        <button class="ttl-btn single-view-btn" data-ttl="0.0027777" data-single="true">👁️ Single View</button>
+        <button class="ttl-btn" data-ttl="1">1 Hour</button>
+        <button class="ttl-btn active" data-ttl="24">24 Hours</button>
+        <button class="ttl-btn" data-ttl="48">48 Hours</button>
+        <button class="ttl-btn" data-ttl="7">7 Days</button>
+      </div>
+      <p class="ttl-description">Single View: Image auto-deletes in 10 seconds (starts after viewer opens)</p>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-upload" id="selectBtn">Select Image</button>
+    </div>
+
+    <!-- Gallery of uploaded images -->
+    <div class="gallery-section" id="gallerySection" style="display: none;">
+      <div class="gallery-title">📸 Your Uploaded Images</div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
