@@ -6,6 +6,20 @@ let isSingleViewMode = false; // Track if single-view is selected in TTL selecto
 let cachedDB = null; // Cache database connection
 let galleryObjectURLs = []; // Track ObjectURLs for cleanup
 
+// Helper function to get base URL that works on both localhost and GitHub Pages
+function getBaseUrl() {
+  let pathname = window.location.pathname;
+  // Remove index.html if present
+  if (pathname.endsWith('index.html')) {
+    pathname = pathname.replace('index.html', '');
+  }
+  // Ensure trailing slash
+  if (!pathname.endsWith('/')) {
+    pathname += '/';
+  }
+  return window.location.origin + pathname;
+}
+
 // Initialize IndexedDB with caching
 function initDB() {
   // Return cached connection if available
@@ -207,9 +221,9 @@ async function handleFileUpload(file) {
     await saveImage(id, file, file.name, selectedTTL);
 
     const hours = Math.round(selectedTTL / (1000 * 60 * 60));
-    // Point directly to viewer.html - completely independent
-    const viewerPath = window.location.pathname.replace('index.html', 'viewer.html');
-    let shareUrl = `${window.location.origin}${viewerPath}?id=${encodeURIComponent(id)}`;
+    // Generate viewer URL using helper function (works on both localhost and GitHub Pages)
+    const baseUrl = getBaseUrl();
+    let shareUrl = `${baseUrl}viewer.html?id=${encodeURIComponent(id)}`;
     
     // Add single-view parameter if selected from TTL
     if (isSingleViewMode) {
@@ -345,9 +359,9 @@ async function updateGallery() {
     copyBtn.title = 'Copy link to clipboard';
     copyBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      // Get the base URL (works on both local and deployed)
-      const baseUrl = window.location.origin + window.location.pathname.replace('/index.html', '');
-      const shareUrl = `${baseUrl}/viewer.html?id=${encodeURIComponent(img.id)}`;
+      // Use helper function to get base URL (works on both localhost and GitHub Pages)
+      const baseUrl = getBaseUrl();
+      const shareUrl = `${baseUrl}viewer.html?id=${encodeURIComponent(img.id)}`;
       
       try {
         // Copy to clipboard
